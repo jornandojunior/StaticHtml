@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz de Banco de Dados — SQL</title>
+<style>
+  :root { color-scheme: light; --primary:#2457c5; --ink:#172033; --muted:#64748b; --line:#e2e8f0; --bg:#f4f7fb; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
+  .score {
+    position:fixed; top:14px; right:18px; z-index:10;
+    background:#172033; color:white; padding:12px 18px; border-radius:14px;
+    box-shadow:0 5px 18px #17203335; font-weight:700; min-width:130px; text-align:center;
+  }
+  .score small { display:block; color:#cbd5e1; font-size:11px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; }
+  .score strong { font-size:25px; }
+  header { background:linear-gradient(120deg,#173b91,#3478df); color:white; padding:38px 22px 34px; }
+  header .inner, main { max-width:900px; margin:auto; }
+  h1 { margin:0 150px 8px 0; font-size:clamp(25px,4vw,36px); }
+  header p { margin:0; color:#e2eaff; }
+  main { padding:26px 18px 60px; }
+  .intro { color:var(--muted); margin:0 0 20px; }
+  .question { background:white; border:1px solid var(--line); border-radius:15px; padding:22px; margin:0 0 16px; box-shadow:0 3px 12px #0f172a08; }
+  .qhead { display:flex; gap:10px; align-items:flex-start; margin-bottom:14px; }
+  .number { flex:0 0 34px; height:34px; border-radius:10px; background:#eaf0ff; color:var(--primary); display:grid; place-items:center; font-weight:700; }
+  h2 { font-size:17px; margin:4px 0 0; }
+  .options { display:grid; gap:9px; }
+  .option { display:flex; align-items:flex-start; gap:10px; padding:11px 13px; border:1px solid var(--line); border-radius:10px; cursor:pointer; transition:.15s; }
+  .option:hover { border-color:#8aa8ed; background:#f8faff; }
+  .option input { margin-top:4px; accent-color:var(--primary); }
+  .option.correct { background:#ecfdf3; border-color:#22a06b; }
+  .option.incorrect { background:#fff1f2; border-color:#e05260; }
+  .feedback { margin-top:12px; font-size:14px; font-weight:700; }
+  .feedback.good { color:#087443; } .feedback.bad { color:#b42332; }
+  .question.answered .option { cursor:default; }
+  .question.answered .option:hover { background:inherit; }
+  .actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:24px; }
+  button { border:0; border-radius:11px; padding:13px 20px; background:var(--primary); color:white; font-weight:700; font-size:15px; cursor:pointer; }
+  button:hover { background:#1946a8; }
+  button.secondary { background:#e2e8f0; color:#172033; }
+  #result { font-weight:700; color:var(--primary); }
+  @media(max-width:520px) {
+    .score { top:9px; right:9px; padding:8px 12px; min-width:100px; }
+    .score strong { font-size:20px; }
+    header { padding-top:75px; }
+    h1 { margin-right:0; }
+    .question { padding:17px; }
+  }
+</style>
+</head>
+<body>
+<div class="score" aria-live="polite"><small>Pontuação</small><strong><span id="score">0</span> / 200</strong></div>
+<header><div class="inner">
+  <h1>Quiz de Banco de Dados</h1>
+  <p>Teste seus conhecimentos sobre os comandos SQL: CREATE, ALTER, DROP, INSERT, UPDATE e DELETE.</p>
+</div></header>
+<main>
+  <p class="intro">São 20 questões de múltipla escolha. Cada resposta correta vale <strong>10 pontos</strong>. Selecione uma alternativa em cada questão para conferir sua resposta.</p>
+  <div id="quiz"></div>
+  <div class="actions">
+    <button class="secondary" id="reset" type="button">Reiniciar quiz</button>
+    <span id="result" aria-live="polite"></span>
+  </div>
+</main>
+<script>
+const questions = [
+ {q:"Qual é a finalidade principal do comando CREATE TABLE?",o:["Alterar os dados de uma tabela existente","Criar uma nova tabela no banco de dados","Excluir uma tabela permanentemente","Consultar os registros de uma tabela","Renomear uma coluna"],a:1,e:"CREATE TABLE define uma nova tabela, incluindo suas colunas e tipos de dados."},
+ {q:"Qual comando cria um novo banco de dados chamado loja?",o:["MAKE DATABASE loja;","NEW DATABASE loja;","CREATE DATABASE loja;","INSERT DATABASE loja;","ALTER DATABASE loja;"],a:2,e:"A sintaxe padrão é CREATE DATABASE nome_do_banco;."},
+ {q:"Em um CREATE TABLE, para que serve VARCHAR(100)?",o:["Define um número inteiro de até 100 dígitos","Define um texto de tamanho variável, com limite de 100 caracteres","Cria automaticamente 100 registros","Define uma data com 100 dias","Define uma chave estrangeira"],a:1,e:"VARCHAR(100) armazena texto de tamanho variável, limitado a 100 caracteres."},
+ {q:"Qual restrição identifica exclusivamente cada registro de uma tabela?",o:["DEFAULT","CHECK","FOREIGN KEY","PRIMARY KEY","NOT NULL"],a:3,e:"PRIMARY KEY identifica unicamente cada linha e não aceita valores nulos."},
+ {q:"Qual comando adiciona a coluna telefone à tabela clientes?",o:["UPDATE TABLE clientes ADD telefone VARCHAR(20);","ALTER TABLE clientes ADD telefone VARCHAR(20);","CREATE COLUMN clientes telefone VARCHAR(20);","INSERT INTO clientes telefone VARCHAR(20);","ADD TABLE clientes telefone VARCHAR(20);"],a:1,e:"ALTER TABLE modifica a estrutura da tabela; ADD acrescenta uma coluna."},
+ {q:"Qual instrução altera o tipo da coluna preco para DECIMAL(10,2) no MySQL?",o:["ALTER TABLE produtos MODIFY preco DECIMAL(10,2);","UPDATE produtos SET preco DECIMAL(10,2);","CHANGE DATABASE produtos preco DECIMAL(10,2);","ALTER COLUMN produtos ADD preco DECIMAL(10,2);","MODIFY TABLE produtos preco DECIMAL(10,2);"],a:0,e:"No MySQL, ALTER TABLE ... MODIFY altera a definição de uma coluna."},
+ {q:"Qual comando é usado para renomear uma tabela (sintaxe MySQL)?",o:["ALTER TABLE antigo TO novo;","UPDATE TABLE antigo NAME novo;","RENAME TABLE antigo TO novo;","CHANGE TABLE antigo novo;","CREATE TABLE novo FROM antigo;"],a:2,e:"No MySQL, RENAME TABLE nome_antigo TO nome_novo renomeia a tabela."},
+ {q:"O que acontece ao executar DROP TABLE pedidos?",o:["Todos os pedidos recebem status cancelado","Apenas os registros mais antigos são removidos","A tabela e sua estrutura são removidas","A tabela fica vazia, mas continua existindo","A tabela é renomeada para DROP"],a:2,e:"DROP TABLE remove a tabela do banco, incluindo sua estrutura e seus dados."},
+ {q:"Qual é a diferença entre DROP TABLE e DELETE FROM tabela?",o:["Não existe diferença","DROP remove a estrutura da tabela; DELETE remove registros e mantém a tabela","DELETE remove a estrutura; DROP remove apenas registros","Ambos removem somente uma coluna","DROP altera os dados e DELETE cria uma tabela"],a:1,e:"DROP elimina o objeto tabela; DELETE apaga linhas, preservando a tabela."},
+ {q:"Qual comando remove um banco de dados chamado teste?",o:["DELETE DATABASE teste;","REMOVE DATABASE teste;","DROP DATABASE teste;","ALTER DATABASE teste DELETE;","TRUNCATE DATABASE teste;"],a:2,e:"DROP DATABASE exclui o banco de dados inteiro. Use com cuidado."},
+ {q:"Qual instrução insere um cliente na tabela clientes?",o:["ADD INTO clientes VALUES (1, 'Ana');","INSERT INTO clientes VALUES (1, 'Ana');","CREATE clientes (1, 'Ana');","UPDATE clientes ADD (1, 'Ana');","PUT clientes VALUES (1, 'Ana');"],a:1,e:"INSERT INTO adiciona novos registros. A lista de colunas pode ser informada explicitamente."},
+ {q:"Qual é a forma mais segura de inserir valores indicando as colunas?",o:["INSERT clientes (nome, idade) VALUES ('Bia', 25);","INSERT INTO clientes (nome, idade) VALUES ('Bia', 25);","CREATE INTO clientes (nome, idade) VALUES ('Bia', 25);","UPDATE clientes (nome, idade) VALUES ('Bia', 25);","ADD ROW clientes ('Bia', 25);"],a:1,e:"INSERT INTO tabela (colunas) VALUES (valores) deixa explícita a correspondência dos campos."},
+ {q:"O que ocorre se um INSERT omitir uma coluna NOT NULL sem valor padrão?",o:["O banco sempre preenche com zero","A coluna é excluída automaticamente","A inserção normalmente falha por violação da restrição","A tabela é apagada","O valor é copiado da linha anterior"],a:2,e:"Uma coluna NOT NULL exige um valor, a menos que exista um valor padrão aplicável."},
+ {q:"Qual comando altera o email do cliente de id 5?",o:["CHANGE clientes SET email='novo@exemplo.com' WHERE id=5;","UPDATE clientes SET email='novo@exemplo.com' WHERE id=5;","ALTER clientes email='novo@exemplo.com' WHERE id=5;","INSERT INTO clientes SET email='novo@exemplo.com' WHERE id=5;","MODIFY clientes email='novo@exemplo.com' WHERE id=5;"],a:1,e:"UPDATE tabela SET coluna=valor WHERE condição atualiza os registros que atendem à condição."},
+ {q:"Qual é a função da cláusula WHERE em um UPDATE?",o:["Ordenar os registros atualizados","Limitar quais registros serão atualizados","Criar uma nova coluna","Definir o tipo de dado","Salvar automaticamente um backup"],a:1,e:"WHERE filtra as linhas afetadas. Sem ela, todas as linhas podem ser atualizadas."},
+ {q:"O que pode acontecer ao executar UPDATE produtos SET preco = 10; sem WHERE?",o:["Somente o primeiro produto será alterado","Nenhum registro será alterado","Todos os registros da tabela terão o preço definido como 10","A tabela será excluída","Será criada uma coluna chamada preco"],a:2,e:"Sem WHERE, o UPDATE afeta todas as linhas da tabela."},
+ {q:"Qual comando exclui somente o cliente cujo id é 8?",o:["DROP FROM clientes WHERE id=8;","DELETE clientes id=8;","DELETE FROM clientes WHERE id=8;","REMOVE ROW clientes id=8;","ALTER TABLE clientes DROP id=8;"],a:2,e:"DELETE FROM com WHERE remove apenas as linhas que correspondem à condição."},
+ {q:"O que acontece ao executar DELETE FROM clientes; sem WHERE?",o:["A tabela e suas colunas são removidas","Todos os registros da tabela são excluídos, mas a estrutura permanece","Somente registros duplicados são excluídos","Apenas o primeiro registro é excluído","O banco de dados inteiro é removido"],a:1,e:"Sem WHERE, DELETE remove todas as linhas, mas mantém a tabela e suas definições."},
+ {q:"Qual comando remove a coluna observacao da tabela pedidos (sintaxe comum)?",o:["DELETE COLUMN observacao FROM pedidos;","DROP observacao FROM pedidos;","ALTER TABLE pedidos DROP COLUMN observacao;","UPDATE TABLE pedidos REMOVE observacao;","DELETE FROM pedidos.observacao;"],a:2,e:"ALTER TABLE ... DROP COLUMN remove uma coluna da estrutura da tabela."},
+ {q:"Você precisa apagar todos os registros de uma tabela, mantendo sua estrutura. Qual comando entre as opções atende a esse objetivo?",o:["DROP TABLE vendas;","DELETE FROM vendas;","DROP DATABASE vendas;","ALTER TABLE vendas DROP;","CREATE TABLE vendas;"],a:1,e:"DELETE FROM vendas remove todas as linhas quando não há WHERE, mantendo a tabela."}
+];
+
+let score = 0;
+const answered = new Set();
+const quiz = document.getElementById('quiz');
+const scoreEl = document.getElementById('score');
+const resultEl = document.getElementById('result');
+
+function render() {
+  quiz.innerHTML = '';
+  questions.forEach((item, index) => {
+    const section = document.createElement('section');
+    section.className = 'question';
+    section.id = `question-${index}`;
+    const head = document.createElement('div');
+    head.className = 'qhead';
+    const number = document.createElement('span');
+    number.className = 'number';
+    number.textContent = index + 1;
+    const heading = document.createElement('h2');
+    heading.textContent = item.q;
+    head.append(number, heading);
+    const options = document.createElement('div');
+    options.className = 'options';
+    item.o.forEach((option, optionIndex) => {
+      const label = document.createElement('label');
+      label.className = 'option';
+      const radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = `question-${index}`;
+      radio.value = optionIndex;
+      radio.addEventListener('change', () => answer(index, optionIndex, section, options, feedback));
+      const text = document.createElement('span');
+      text.textContent = `${String.fromCharCode(65 + optionIndex)}) ${option}`;
+      label.append(radio, text);
+      options.append(label);
+    });
+    const feedback = document.createElement('div');
+    feedback.className = 'feedback';
+    feedback.hidden = true;
+    section.append(head, options, feedback);
+    quiz.append(section);
+  });
+}
+
+function answer(index, selected, section, options, feedback) {
+  if (answered.has(index)) return;
+  answered.add(index);
+  const item = questions[index];
+  const labels = [...options.querySelectorAll('.option')];
+  labels.forEach((label, i) => {
+    label.querySelector('input').disabled = true;
+    if (i === item.a) label.classList.add('correct');
+    else if (i === selected) label.classList.add('incorrect');
+  });
+  if (selected === item.a) {
+    score += 10;
+    scoreEl.textContent = score;
+    feedback.textContent = `Correto! +10 pontos. ${item.e}`;
+    feedback.className = 'feedback good';
+  } else {
+    feedback.textContent = `Resposta incorreta. ${item.e}`;
+    feedback.className = 'feedback bad';
+  }
+  feedback.hidden = false;
+  section.classList.add('answered');
+  if (answered.size === questions.length) {
+    resultEl.textContent = `Resultado final: ${score} de 200 pontos.`;
+  }
+}
+
+document.getElementById('reset').addEventListener('click', () => {
+  score = 0;
+  answered.clear();
+  scoreEl.textContent = '0';
+  resultEl.textContent = '';
+  render();
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+
+render();
+</script>
+</body>
+</html>
